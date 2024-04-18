@@ -2,53 +2,53 @@ CREATE DATABASE SQLTestTask
 
 USE SQLTestTask
 
---сreating the Banks table
+--СЃreating the Banks table
 CREATE TABLE Banks(
 	BankId INT IDENTITY(1, 1) NOT NULL,
 	BankName VARCHAR(20) NOT NULL,
 	PRIMARY KEY (BankId)
 );
 
---сreating the Cities table
+--СЃreating the Cities table
 CREATE TABLE Cities(
 	CityId INT IDENTITY(1, 1) NOT NULL,
 	CityName VARCHAR(20) NOT NULL,
 	PRIMARY KEY (CityId)
 );
 
---сreating the Branches table
+--СЃreating the Branches table
 CREATE TABLE Branches(
 	BranchId INT IDENTITY(1, 1) NOT NULL,
-	BankId INT,
-	CityId INT,
+	BankId INT NOT NULL,
+	CityId INT NOT NULL,
 	BranchName VARCHAR(20) NOT NULL,
 	PRIMARY KEY (BranchId),
 	CONSTRAINT FK_Banks_Branches FOREIGN KEY (BankId) REFERENCES Banks(BankId),
 	CONSTRAINT FK_Cities_Branches FOREIGN KEY (CityId) REFERENCES Cities(CityId)
 );
 
---сreating the SocialStatuses table
+--СЃreating the SocialStatuses table
 CREATE TABLE SocialStatuses(
 	StatusId INT IDENTITY(1, 1) NOT NULL,
 	StatusName VARCHAR(20) NOT NULL,
 	PRIMARY KEY (StatusId)
 );
 
---сreating the Customers table
+--СЃreating the Customers table
 CREATE TABLE Customers(
 	CustomerId INT IDENTITY(1,1) NOT NULL,
-	StatusId INT,
+	StatusId INT NOT NULL,
 	FirstName VARCHAR(20) NOT NULL,
 	LastName VARCHAR(20) NOT NULL,
 	PRIMARY KEY (CustomerID),
 	CONSTRAINT FK_SocialStatuses_Customers FOREIGN KEY (StatusId) REFERENCES SocialStatuses(StatusId)
 );
 
---сreating the Accounts table
+--СЃreating the Accounts table
 CREATE TABLE Accounts(
 	AccountId INT IDENTITY(1,1) NOT NULL,
-	BankId INT,
-	CustomerId INT,
+	BankId INT NOT NULL,
+	CustomerId INT NOT NULL,
 	AccountBalance INT NOT NULL,
 	PRIMARY KEY (AccountId),
 	CONSTRAINT FK_Banks_Accounts FOREIGN KEY (BankId) REFERENCES Banks(BankId),
@@ -56,11 +56,11 @@ CREATE TABLE Accounts(
 	CONSTRAINT UC_Bank_Customer UNIQUE (BankId, CustomerId)
 );
 
---сreating the Cards table
+--СЃreating the Cards table
 CREATE TABLE Cards(
 	CardId INT IDENTITY(1,1) NOT NULL,
-	AccountId INT,
-	CardBalance INT NOT NULL,
+	AccountId INT NOT NULL,
+	CardBalance MONEY NOT NULL,
 	CONSTRAINT FK_Accounts_Cards FOREIGN KEY (AccountId) REFERENCES Accounts(AccountId)
 );
 
@@ -151,8 +151,7 @@ SELECT
     a.AccountBalance - SUM(c.CardBalance) AS BalanceDifference
 FROM Accounts a
 JOIN Banks b ON a.BankId = b.BankId
---INNER JOIN Cards c ON a.AccountId = c.AccountId
-LEFT JOIN Cards c ON a.AccountId = c.AccountId
+JOIN Cards c ON a.AccountId = c.AccountId
 GROUP BY a.AccountId, b.BankName, a.AccountBalance
 HAVING a.AccountBalance <> SUM(c.CardBalance);
 
@@ -163,37 +162,37 @@ SELECT
 FROM SocialStatuses s
 LEFT JOIN Customers cu ON s.StatusId = cu.StatusId
 LEFT JOIN Accounts a ON cu.CustomerId = a.CustomerId
-LEFT JOIN Cards c ON a.AccountId = c.CardId
+LEFT JOIN Cards c ON a.AccountId = c.AccountId
 GROUP BY s.StatusName
 
---task5(подзапрос)
+--task5(РїРѕРґР·Р°РїСЂРѕСЃ)
 SELECT
     s.StatusName,
     (
         SELECT COUNT(c.CardId)
         FROM Customers cu
-        JOIN Accounts a ON cu.CustomerId = a.CustomerId
-        JOIN Cards c ON a.AccountId = c.AccountId
+        LEFT JOIN Accounts a ON cu.CustomerId = a.CustomerId
+        LEFT JOIN Cards c ON a.AccountId = c.AccountId
         WHERE cu.StatusId = s.StatusId
     ) AS CardCount
 FROM SocialStatuses s;
 
 --task6
--- Создаем stored procedure
+-- РЎРѕР·РґР°РµРј stored procedure
 USE SQLTestTask
 GO
 CREATE PROCEDURE AddAmountToAccounts
     @StatusId INT
 AS
 BEGIN
-    -- Проверка наличия социального статуса
+    -- РџСЂРѕРІРµСЂРєР° РЅР°Р»РёС‡РёСЏ СЃРѕС†РёР°Р»СЊРЅРѕРіРѕ СЃС‚Р°С‚СѓСЃР°
     IF NOT EXISTS (SELECT 1 FROM SocialStatuses WHERE StatusId = @StatusId)
     BEGIN
-        PRINT 'Социальный статус с Id ' + CAST(@StatusId AS NVARCHAR(10)) + ' не найден.';
+        PRINT 'РЎРѕС†РёР°Р»СЊРЅС‹Р№ СЃС‚Р°С‚СѓСЃ СЃ Id ' + CAST(@StatusId AS NVARCHAR(10)) + ' РЅРµ РЅР°Р№РґРµРЅ.';
         RETURN;
     END
 
-    -- Проверка наличия аккаунтов с данным социальным статусом
+    -- РџСЂРѕРІРµСЂРєР° РЅР°Р»РёС‡РёСЏ Р°РєРєР°СѓРЅС‚РѕРІ СЃ РґР°РЅРЅС‹Рј СЃРѕС†РёР°Р»СЊРЅС‹Рј СЃС‚Р°С‚СѓСЃРѕРј
     IF NOT EXISTS (
         SELECT 1
         FROM Customers cu
@@ -201,11 +200,11 @@ BEGIN
         WHERE cu.StatusId = @StatusId
     )
     BEGIN
-        PRINT 'Для социального статуса с Id ' + CAST(@StatusId AS NVARCHAR(10)) + ' нет привязанных аккаунтов.';
+        PRINT 'Р”Р»СЏ СЃРѕС†РёР°Р»СЊРЅРѕРіРѕ СЃС‚Р°С‚СѓСЃР° СЃ Id ' + CAST(@StatusId AS NVARCHAR(10)) + ' РЅРµС‚ РїСЂРёРІСЏР·Р°РЅРЅС‹С… Р°РєРєР°СѓРЅС‚РѕРІ.';
         RETURN;
     END
 
-    -- Добавление $10 на каждый банковский аккаунт с данным социальным статусом
+    -- Р”РѕР±Р°РІР»РµРЅРёРµ $10 РЅР° РєР°Р¶РґС‹Р№ Р±Р°РЅРєРѕРІСЃРєРёР№ Р°РєРєР°СѓРЅС‚ СЃ РґР°РЅРЅС‹Рј СЃРѕС†РёР°Р»СЊРЅС‹Рј СЃС‚Р°С‚СѓСЃРѕРј
     UPDATE Accounts
     SET AccountBalance = AccountBalance + 10
     WHERE CustomerId IN (
@@ -214,11 +213,11 @@ BEGIN
         WHERE cu.StatusId = @StatusId
     )
     
-    -- Вывод сообщения об успешном выполнении
-    PRINT 'Добавлено $10 на каждый банковский аккаунт для социального статуса с Id ' + CAST(@StatusId AS NVARCHAR(10));
+    -- Р’С‹РІРѕРґ СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± СѓСЃРїРµС€РЅРѕРј РІС‹РїРѕР»РЅРµРЅРёРё
+    PRINT 'Р”РѕР±Р°РІР»РµРЅРѕ $10 РЅР° РєР°Р¶РґС‹Р№ Р±Р°РЅРєРѕРІСЃРєРёР№ Р°РєРєР°СѓРЅС‚ РґР»СЏ СЃРѕС†РёР°Р»СЊРЅРѕРіРѕ СЃС‚Р°С‚СѓСЃР° СЃ Id ' + CAST(@StatusId AS NVARCHAR(10));
 END
 
---Использование процедуры
+--РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РїСЂРѕС†РµРґСѓСЂС‹
 SELECT
 	a.AccountId,
 	a.AccountBalance
@@ -257,13 +256,13 @@ BEGIN
 	BEGIN TRANSACTION;
 
 	BEGIN TRY
-		--опредеяем AccountId
+		--РѕРїСЂРµРґРµСЏРµРј AccountId
 		DECLARE @AccountId INT;
 		SELECT @AccountId = AccountId
 		FROM Cards
 		WHERE CardId = @CardId;
 
-		--проверяем, что сумма для перевода не превышает баланса счета
+		--РїСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЃСѓРјРјР° РґР»СЏ РїРµСЂРµРІРѕРґР° РЅРµ РїСЂРµРІС‹С€Р°РµС‚ Р±Р°Р»Р°РЅСЃР° СЃС‡РµС‚Р°
 		DECLARE @AvailableBalance INT;
 		SELECT @AvailableBalance = a.AccountBalance - ISNULL(SUM(c.CardBalance), 0)
 		FROM Accounts a
@@ -279,13 +278,13 @@ BEGIN
 			END
 		ELSE
 			BEGIN
-            -- В случае недостаточного баланса счета, откатываем транзакцию
+            -- Р’ СЃР»СѓС‡Р°Рµ РЅРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕРіРѕ Р±Р°Р»Р°РЅСЃР° СЃС‡РµС‚Р°, РѕС‚РєР°С‚С‹РІР°РµРј С‚СЂР°РЅР·Р°РєС†РёСЋ
             ROLLBACK;
-            PRINT 'Недостаточно средств на счете для перевода.'
+            PRINT 'РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ СЃСЂРµРґСЃС‚РІ РЅР° СЃС‡РµС‚Рµ РґР»СЏ РїРµСЂРµРІРѕРґР°.'
         END
 	END TRY
 	BEGIN CATCH
-		-- В случае возникновения ошибки, откатываем транзакцию
+		-- Р’ СЃР»СѓС‡Р°Рµ РІРѕР·РЅРёРєРЅРѕРІРµРЅРёСЏ РѕС€РёР±РєРё, РѕС‚РєР°С‚С‹РІР°РµРј С‚СЂР°РЅР·Р°РєС†РёСЋ
         IF @@TRANCOUNT > 0
             ROLLBACK;
         THROW;
@@ -294,7 +293,7 @@ BEGIN
 	COMMIT;
 END;
 
---Использование процедуры
+--РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РїСЂРѕС†РµРґСѓСЂС‹
 SELECT
 	a.AccountId,
 	a.AccountBalance,
@@ -316,7 +315,7 @@ JOIN Cards c ON a.AccountId = c.AccountId
 WHERE a.AccountId = 3
 
 --task9
---триггер для таблицы Accounts
+--С‚СЂРёРіРіРµСЂ РґР»СЏ С‚Р°Р±Р»РёС†С‹ Accounts
 USE SQLTestTask
 GO
 CREATE TRIGGER CheckAccountBalance
@@ -328,27 +327,25 @@ BEGIN
     DECLARE @NewAccountBalance INT;
     DECLARE @TotalCardBalance INT;
 
-    -- Получаем значения после выполнения операции
+    -- РџРѕР»СѓС‡Р°РµРј Р·РЅР°С‡РµРЅРёСЏ РїРѕСЃР»Рµ РІС‹РїРѕР»РЅРµРЅРёСЏ РѕРїРµСЂР°С†РёРё
     SELECT @AccountId = i.AccountId, @NewAccountBalance = i.AccountBalance
     FROM inserted i;
 
-    -- Вычисляем сумму баланса всех карт для данного аккаунта
+    -- Р’С‹С‡РёСЃР»СЏРµРј СЃСѓРјРјСѓ Р±Р°Р»Р°РЅСЃР° РІСЃРµС… РєР°СЂС‚ РґР»СЏ РґР°РЅРЅРѕРіРѕ Р°РєРєР°СѓРЅС‚Р°
     SELECT @TotalCardBalance = SUM(CardBalance)
     FROM Cards
     WHERE AccountId = @AccountId;
 
-    -- Проверка условия
+    -- РџСЂРѕРІРµСЂРєР° СѓСЃР»РѕРІРёСЏ
     IF @NewAccountBalance < @TotalCardBalance
     BEGIN
-        PRINT 'Нельзя установить баланс аккаунта меньше, чем сумма балансов карт.';
+        PRINT 'РќРµР»СЊР·СЏ СѓСЃС‚Р°РЅРѕРІРёС‚СЊ Р±Р°Р»Р°РЅСЃ Р°РєРєР°СѓРЅС‚Р° РјРµРЅСЊС€Рµ, С‡РµРј СЃСѓРјРјР° Р±Р°Р»Р°РЅСЃРѕРІ РєР°СЂС‚.';
         ROLLBACK TRANSACTION;
     END
 END;
 
-DROP TRIGGER CheckAccountBalance
-
---использование UPDATE чтобы показать работу триггера c таблицей Accounts
---успешное обновление
+--РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ UPDATE С‡С‚РѕР±С‹ РїРѕРєР°Р·Р°С‚СЊ СЂР°Р±РѕС‚Сѓ С‚СЂРёРіРіРµСЂР° c С‚Р°Р±Р»РёС†РµР№ Accounts
+--СѓСЃРїРµС€РЅРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ
 SELECT
 	a.AccountId,
 	a.AccountBalance,
@@ -371,7 +368,7 @@ From Accounts a
 JOIN Cards c ON a.AccountId = c.AccountId
 WHERE a.AccountId = 3
 
---неудачное обновление
+--РЅРµСѓРґР°С‡РЅРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ
 SELECT
 	a.AccountId,
 	a.AccountBalance,
@@ -394,7 +391,7 @@ From Accounts a
 JOIN Cards c ON a.AccountId = c.AccountId
 WHERE a.AccountId = 3
 
---триггер для таблицы Cards
+--С‚СЂРёРіРіРµСЂ РґР»СЏ С‚Р°Р±Р»РёС†С‹ Cards
 CREATE TRIGGER CheckCardBalance
 ON Cards
 AFTER INSERT, UPDATE
@@ -405,30 +402,32 @@ BEGIN
     DECLARE @TotalCardBalance INT;
     DECLARE @AccountBalance INT;
 
-    -- Получаем значения после выполнения операции
+    -- РџРѕР»СѓС‡Р°РµРј Р·РЅР°С‡РµРЅРёСЏ РїРѕСЃР»Рµ РІС‹РїРѕР»РЅРµРЅРёСЏ РѕРїРµСЂР°С†РёРё
     SELECT @CardId = i.CardId, @AccountId = i.AccountId
     FROM inserted i;
 
-    -- Вычисляем сумму баланса всех карт для данного аккаунта
+    -- Р’С‹С‡РёСЃР»СЏРµРј СЃСѓРјРјСѓ Р±Р°Р»Р°РЅСЃР° РІСЃРµС… РєР°СЂС‚ РґР»СЏ РґР°РЅРЅРѕРіРѕ Р°РєРєР°СѓРЅС‚Р°
     SELECT @TotalCardBalance = SUM(CardBalance)
     FROM Cards
     WHERE AccountId = @AccountId;
 
-    -- Получаем текущий баланс аккаунта
+	print @TotalCardBalance
+
+    -- РџРѕР»СѓС‡Р°РµРј С‚РµРєСѓС‰РёР№ Р±Р°Р»Р°РЅСЃ Р°РєРєР°СѓРЅС‚Р°
     SELECT @AccountBalance = AccountBalance
     FROM Accounts
     WHERE AccountId = @AccountId;
 
-    -- Проверка условия
+    -- РџСЂРѕРІРµСЂРєР° СѓСЃР»РѕРІРёСЏ
     IF @TotalCardBalance > @AccountBalance
     BEGIN
-        PRINT 'Сумма балансов карт не может быть больше баланса аккаунта.';
+        PRINT 'РЎСѓРјРјР° Р±Р°Р»Р°РЅСЃРѕРІ РєР°СЂС‚ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ Р±Р°Р»Р°РЅСЃР° Р°РєРєР°СѓРЅС‚Р°.';
         ROLLBACK TRANSACTION;
     END
 END;
 
---использование UPDATE чтобы показать работу триггера c таблицей Cards
---успешное обновление
+--РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ UPDATE С‡С‚РѕР±С‹ РїРѕРєР°Р·Р°С‚СЊ СЂР°Р±РѕС‚Сѓ С‚СЂРёРіРіРµСЂР° c С‚Р°Р±Р»РёС†РµР№ Cards
+--СѓСЃРїРµС€РЅРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ
 SELECT
 	a.AccountId,
 	a.AccountBalance,
@@ -451,7 +450,7 @@ From Accounts a
 JOIN Cards c ON a.AccountId = c.AccountId
 WHERE a.AccountId = 3
 
---неудачное обновление
+--РЅРµСѓРґР°С‡РЅРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ
 SELECT
 	a.AccountId,
 	a.AccountBalance,
